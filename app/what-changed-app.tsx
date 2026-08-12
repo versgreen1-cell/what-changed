@@ -44,33 +44,33 @@ const demoAfter = [
 ];
 
 const rawDiff = [
-  "@@ -118,11 +124,15 @@ <section data-plan=\"pricing\">",
-  "- <span class=\"price\" data-session=\"a8f2\">$29</span>",
-  "+ <span class=\"price\" data-session=\"c19b\">$39</span>",
-  "  <div class=\"features\">",
-  "+   <li data-test=\"project-cap\">Up to 5 projects</li>",
-  "-   <meta content=\"2026-08-10T09:14:03Z\">",
-  "+   <meta content=\"2026-08-11T09:15:12Z\">",
-  "-   <img src=\"/campaign/summer-a.webp\">",
-  "+   <img src=\"/campaign/summer-b.webp\">",
-  "  </div>",
-  "  <script>window.__SESSION__=\"fce92d1...\"</script>",
+  '@@ -118,11 +124,15 @@ <section data-plan="pricing">',
+  '- <span class="price" data-session="a8f2">$29</span>',
+  '+ <span class="price" data-session="c19b">$39</span>',
+  '  <div class="features">',
+  '+   <li data-test="project-cap">Up to 5 projects</li>',
+  '-   <meta content="2026-08-10T09:14:03Z">',
+  '+   <meta content="2026-08-11T09:15:12Z">',
+  '-   <img src="/campaign/summer-a.webp">',
+  '+   <img src="/campaign/summer-b.webp">',
+  '  </div>',
+  '  <script>window.__SESSION__="fce92d1..."</script>',
 ];
 
 function relativeDate(value: string | null) {
-  if (!value) return "ещё не проверялось";
+  if (!value) return "not checked yet";
   const diff = Date.now() - new Date(value).getTime();
-  if (diff < 60_000) return "только что";
-  if (diff < 3_600_000) return `${Math.max(1, Math.floor(diff / 60_000))} мин назад`;
-  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} ч назад`;
-  return new Intl.DateTimeFormat("ru", { day: "numeric", month: "short" }).format(new Date(value));
+  if (diff < 60_000) return "just now";
+  if (diff < 3_600_000) return `${Math.max(1, Math.floor(diff / 60_000))}m ago`;
+  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
+  return new Intl.DateTimeFormat("en", { day: "numeric", month: "short" }).format(new Date(value));
 }
 
 function frequencyLabel(minutes: number) {
-  if (minutes === 60) return "каждый час";
-  if (minutes === 360) return "каждые 6 часов";
-  if (minutes === 10080) return "раз в неделю";
-  return "раз в день";
+  if (minutes === 60) return "Hourly";
+  if (minutes === 360) return "Every 6 hours";
+  if (minutes === 10080) return "Weekly";
+  return "Daily";
 }
 
 function hostLabel(url: string) {
@@ -96,10 +96,10 @@ export function WhatChangedApp() {
     try {
       const response = await fetch("/api/monitors", { cache: "no-store" });
       const payload = (await response.json()) as { monitors?: Monitor[]; error?: string };
-      if (!response.ok) throw new Error(payload.error || "Не удалось загрузить мониторы.");
+      if (!response.ok) throw new Error(payload.error || "Could not load your pages.");
       setMonitors(payload.monitors ?? []);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Не удалось загрузить мониторы.");
+      setMessage(error instanceof Error ? error.message : "Could not load your pages.");
     } finally {
       setLoading(false);
     }
@@ -115,8 +115,6 @@ export function WhatChangedApp() {
     [monitors, selectedId],
   );
 
-  const alertsCount = monitors.filter((monitor) => monitor.latestChange).length + 1;
-
   async function addMonitor(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
@@ -128,13 +126,13 @@ export function WhatChangedApp() {
         body: JSON.stringify({ url, frequencyMinutes: frequency }),
       });
       const payload = (await response.json()) as { monitor?: { id: number }; error?: string };
-      if (!response.ok) throw new Error(payload.error || "Не удалось добавить страницу.");
+      if (!response.ok) throw new Error(payload.error || "Could not add this page.");
       setUrl("");
       await refresh();
       if (payload.monitor) setSelectedId(payload.monitor.id);
-      setMessage("Страница добавлена. Первый снимок уже сохранён.");
+      setMessage("Page added. The first snapshot is ready.");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Не удалось добавить страницу.");
+      setMessage(error instanceof Error ? error.message : "Could not add this page.");
     } finally {
       setBusy(false);
     }
@@ -144,7 +142,7 @@ export function WhatChangedApp() {
     if (!selected) {
       setDemoPulse(true);
       setShowTechnical(false);
-      window.setTimeout(() => setDemoPulse(false), 900);
+      window.setTimeout(() => setDemoPulse(false), 700);
       return;
     }
     setBusy(true);
@@ -152,11 +150,11 @@ export function WhatChangedApp() {
     try {
       const response = await fetch(`/api/monitors/${selected.id}/check`, { method: "POST" });
       const payload = (await response.json()) as { changed?: boolean; error?: string };
-      if (!response.ok) throw new Error(payload.error || "Проверка не удалась.");
+      if (!response.ok) throw new Error(payload.error || "The check failed.");
       await refresh();
-      setMessage(payload.changed ? "Найдено важное изменение." : "Проверено: важных изменений нет.");
+      setMessage(payload.changed ? "A meaningful change was found." : "Checked. Nothing important changed.");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Проверка не удалась.");
+      setMessage(error instanceof Error ? error.message : "The check failed.");
     } finally {
       setBusy(false);
     }
@@ -171,69 +169,49 @@ export function WhatChangedApp() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: selected.status === "active" ? "paused" : "active" }),
       });
-      if (!response.ok) throw new Error("Не удалось изменить статус.");
+      if (!response.ok) throw new Error("Could not update the monitor.");
       await refresh();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Не удалось изменить статус.");
+      setMessage(error instanceof Error ? error.message : "Could not update the monitor.");
     } finally {
       setBusy(false);
     }
   }
 
   async function removeSelected() {
-    if (!selected || !window.confirm(`Перестать отслеживать ${hostLabel(selected.url)}?`)) return;
+    if (!selected || !window.confirm(`Stop watching ${hostLabel(selected.url)}?`)) return;
     setBusy(true);
     try {
       const response = await fetch(`/api/monitors/${selected.id}`, { method: "DELETE" });
-      if (!response.ok) throw new Error("Не удалось удалить монитор.");
+      if (!response.ok) throw new Error("Could not remove the monitor.");
       setSelectedId("demo");
       await refresh();
-      setMessage("Монитор удалён вместе с его снимками.");
+      setMessage("Monitor removed.");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Не удалось удалить монитор.");
+      setMessage(error instanceof Error ? error.message : "Could not remove the monitor.");
     } finally {
       setBusy(false);
     }
   }
 
   const change = selected?.latestChange;
-  const hasActualChange = Boolean(change);
+  const hasChange = Boolean(change) || !selected;
   const summary = change?.summary ?? (selected
-    ? "Пока всё спокойно. Мы сообщим только о содержательном изменении."
-    : "Цена Pro выросла с $29 до $39. В бесплатном плане появился лимит в 5 проектов.");
+    ? "Nothing important has changed. We will keep checking."
+    : "The Pro price went from $29 to $39. The free plan now has a five-project limit.");
 
   return (
-    <main className="app-shell">
-      <header className="topbar">
-        <a className="brand" href="#top" aria-label="WhatChanged — на главную">
-          <span className="brand-mark" aria-hidden="true"><i /><i /><i /></span>
-          <span>WhatChanged</span>
-        </a>
-        <div className="topbar-meta">
-          <span className="live-dot"><i /> мониторинг работает</span>
-          <a className="small-action" href="#new-monitor">Добавить страницу <span aria-hidden="true">＋</span></a>
+    <main className="page">
+      <section className="intro" aria-labelledby="page-title">
+        <div className="intro-copy">
+          <p className="product-name">WhatChanged</p>
+          <h1 id="page-title">Watch a page without reading every diff.</h1>
+          <p>We check the page and tell you what actually changed. Timestamps, ads and other noise stay out.</p>
         </div>
-      </header>
 
-      <section className="hero" id="top">
-        <div className="hero-copy">
-          <span className="eyebrow">Страницы меняются. Шум — нет.</span>
-          <h1>Узнавайте только<br />о том, что <em>важно.</em></h1>
-          <p>
-            WhatChanged следит за ценами, условиями и политиками — и вместо сорока строк кода присылает одну нормальную фразу.
-          </p>
-        </div>
-        <div className="hero-numbers" aria-label="Сводка мониторинга">
-          <div><strong>{String(monitors.length + 1).padStart(2, "0")}</strong><span>страниц<br />под наблюдением</span></div>
-          <div><strong>{String(alertsCount).padStart(2, "0")}</strong><span>важных<br />изменений</span></div>
-          <div><strong>0</strong><span>ложных<br />тревог сегодня</span></div>
-        </div>
-      </section>
-
-      <section className="monitor-form-wrap" id="new-monitor">
-        <form className="monitor-form" onSubmit={addMonitor}>
+        <form className="add-form" onSubmit={addMonitor}>
           <label className="url-field">
-            <span>Адрес страницы</span>
+            <span>Page address</span>
             <input
               type="text"
               inputMode="url"
@@ -244,41 +222,41 @@ export function WhatChangedApp() {
               required
             />
           </label>
-          <label className="frequency-field">
-            <span>Проверять</span>
+          <label>
+            <span>Check</span>
             <select value={frequency} onChange={(event) => setFrequency(Number(event.target.value))}>
-              <option value={60}>Каждый час</option>
-              <option value={360}>Каждые 6 часов</option>
-              <option value={1440}>Раз в день</option>
-              <option value={10080}>Раз в неделю</option>
+              <option value={60}>Hourly</option>
+              <option value={360}>Every 6 hours</option>
+              <option value={1440}>Daily</option>
+              <option value={10080}>Weekly</option>
             </select>
           </label>
           <button className="primary-button" type="submit" disabled={busy}>
-            {busy ? "Добавляем…" : "Следить за страницей"}<span aria-hidden="true">↗</span>
+            {busy ? "Adding..." : "Watch page"}
           </button>
         </form>
-        <p className="form-note"><span aria-hidden="true">●</span> Первый снимок сохраняется сразу. Аккаунт и настройка не нужны.</p>
-        {message && <p className="toast" role="status">{message}</p>}
+        <p className="form-note">No account needed. We save the first copy right away.</p>
+        {message && <p className="notice" role="status">{message}</p>}
       </section>
 
-      <section className="workspace" aria-label="Мониторинг страниц">
+      <section className="app-grid" aria-label="Page monitors">
         <aside className="monitor-list">
-          <div className="section-heading">
-            <span>Под наблюдением</span>
-            <b>{monitors.length + 1}</b>
+          <div className="list-title">
+            <h2>Pages</h2>
+            <span>{monitors.length + 1}</span>
           </div>
           <button
             className={`monitor-item ${selectedId === "demo" ? "selected" : ""}`}
             type="button"
             onClick={() => { setSelectedId("demo"); setShowTechnical(false); }}
           >
-            <span className="site-favicon demo-favicon">F</span>
-            <span className="monitor-copy"><strong>Formly Pricing</strong><small>formly.example/pricing</small></span>
-            <span className="alert-badge" aria-label="Есть изменение">1</span>
+            <span className="site-initial">F</span>
+            <span className="monitor-copy"><strong>Formly pricing</strong><small>formly.example</small></span>
+            <span className="change-count" aria-label="One change">1</span>
           </button>
 
           {loading ? (
-            <div className="list-loading">Загружаем ваши страницы…</div>
+            <p className="list-loading">Loading pages...</p>
           ) : monitors.map((monitor) => (
             <button
               className={`monitor-item ${selectedId === monitor.id ? "selected" : ""}`}
@@ -286,84 +264,72 @@ export function WhatChangedApp() {
               key={monitor.id}
               onClick={() => { setSelectedId(monitor.id); setShowTechnical(false); }}
             >
-              <span className="site-favicon">{hostLabel(monitor.url).charAt(0).toUpperCase()}</span>
+              <span className="site-initial">{hostLabel(monitor.url).charAt(0).toUpperCase()}</span>
               <span className="monitor-copy"><strong>{monitor.name}</strong><small>{hostLabel(monitor.url)}</small></span>
-              {monitor.latestChange ? <span className="alert-badge" aria-label="Есть изменение">1</span> : <span className="quiet-badge" aria-label="Изменений нет">✓</span>}
+              <span className={monitor.latestChange ? "change-count" : "quiet-mark"}>
+                {monitor.latestChange ? "1" : "OK"}
+              </span>
             </button>
           ))}
-
-          <div className="filter-note">
-            <span className="filter-icon" aria-hidden="true">≋</span>
-            <div><strong>Шум отфильтрован</strong><p>Время, реклама, cookie и служебные токены не создают тревогу.</p></div>
-          </div>
+          <p className="noise-note">Small dynamic changes are ignored automatically.</p>
         </aside>
 
         <article className={`change-panel ${demoPulse ? "pulse" : ""}`}>
           <div className="change-header">
             <div>
-              <div className="breadcrumb">
-                <span>{selected ? hostLabel(selected.url) : "formly.example"}</span>
-                <span aria-hidden="true">/</span>
-                <b>{selected?.name ?? "Pricing"}</b>
-              </div>
-              <h2>{selected?.name ?? "Formly — тарифы"}</h2>
+              <p>{selected ? hostLabel(selected.url) : "formly.example/pricing"}</p>
+              <h2>{selected?.name ?? "Formly pricing"}</h2>
             </div>
             <div className="change-actions">
               {selected && (
-                <button className="icon-button" type="button" onClick={toggleStatus} disabled={busy} title={selected.status === "active" ? "Приостановить" : "Возобновить"}>
-                  {selected.status === "active" ? "Ⅱ" : "▶"}
+                <button className="secondary-button" type="button" onClick={toggleStatus} disabled={busy}>
+                  {selected.status === "active" ? "Pause" : "Resume"}
                 </button>
               )}
-              <button className="check-button" type="button" onClick={checkNow} disabled={busy}>
-                <span aria-hidden="true">↻</span> {busy ? "Проверяем…" : selected ? "Проверить сейчас" : "Повторить демо"}
+              <button className="secondary-button" type="button" onClick={checkNow} disabled={busy}>
+                {busy ? "Checking..." : "Check now"}
               </button>
             </div>
           </div>
 
           <div className="status-row">
             <span className={selected?.lastError ? "status-error" : "status-ok"}>
-              <i /> {selected?.lastError ? "нужна проверка" : selected?.status === "paused" ? "на паузе" : "активно"}
+              {selected?.lastError ? "Needs attention" : selected?.status === "paused" ? "Paused" : "Active"}
             </span>
-            <span>Проверка: {selected ? frequencyLabel(selected.frequencyMinutes) : "каждый час"}</span>
-            <span>Последняя: {selected ? relativeDate(selected.lastCheckedAt) : "12 мин назад"}</span>
+            <span>{selected ? frequencyLabel(selected.frequencyMinutes) : "Hourly"}</span>
+            <span>Last checked {selected ? relativeDate(selected.lastCheckedAt) : "12m ago"}</span>
           </div>
 
           {selected?.lastError && <div className="error-strip">{selected.lastError}</div>}
 
-          <section className={`signal-card ${hasActualChange || !selected ? "has-change" : "is-quiet"}`}>
+          <section className={`signal-card ${hasChange ? "has-change" : "is-quiet"}`}>
             <div className="signal-label">
-              <span>{hasActualChange || !selected ? "Важное изменение" : "Изменений нет"}</span>
-              <time>{change ? relativeDate(change.createdAt) : selected ? relativeDate(selected.lastCheckedAt) : "сегодня, 09:15"}</time>
+              <span>{hasChange ? "Meaningful change" : "No change"}</span>
+              <time>{change ? relativeDate(change.createdAt) : selected ? relativeDate(selected.lastCheckedAt) : "Today, 9:15"}</time>
             </div>
             <p>{summary}</p>
-            {(hasActualChange || !selected) && (
-              <div className="signal-tags">
-                <span>цена</span><span>условия тарифа</span><b>{change ? `${change.score}% текста` : "2 значимых правки"}</b>
-              </div>
-            )}
           </section>
 
-          <div className="view-switch" role="tablist" aria-label="Режим сравнения">
-            <button type="button" role="tab" aria-selected={!showTechnical} onClick={() => setShowTechnical(false)}>Понятное сравнение</button>
-            <button type="button" role="tab" aria-selected={showTechnical} onClick={() => setShowTechnical(true)}>Технический diff <span>для контраста</span></button>
+          <div className="view-switch" role="tablist" aria-label="Comparison view">
+            <button type="button" role="tab" aria-selected={!showTechnical} onClick={() => setShowTechnical(false)}>Before and after</button>
+            <button type="button" role="tab" aria-selected={showTechnical} onClick={() => setShowTechnical(true)}>Raw diff</button>
           </div>
 
           {showTechnical ? (
             <div className="technical-diff" role="tabpanel">
-              <div className="code-top"><span /><span /><span /><b>page-source.diff</b><em>11 строк из 43</em></div>
+              <div className="code-top">page-source.diff <span>11 lines</span></div>
               <pre>{rawDiff.map((line, index) => <code className={line.startsWith("+") ? "added" : line.startsWith("-") ? "removed" : ""} key={index}>{line}{"\n"}</code>)}</pre>
-              <div className="noise-caption"><strong>9 из 11 строк — шум</strong><span>WhatChanged оставил только изменение цены и лимита.</span></div>
+              <p>Most of this is page noise. WhatChanged kept the price and plan-limit updates.</p>
             </div>
-          ) : (change ? (
-            <div className="comparison actual-comparison" role="tabpanel">
-              <SnapshotFrame label="Было" snapshotId={change.fromSnapshotId} />
-              <SnapshotFrame label="Стало" snapshotId={change.toSnapshotId} changed />
+          ) : change ? (
+            <div className="comparison" role="tabpanel">
+              <SnapshotFrame label="Before" snapshotId={change.fromSnapshotId} />
+              <SnapshotFrame label="After" snapshotId={change.toSnapshotId} changed />
             </div>
           ) : selected ? (
             <div className="current-snapshot" role="tabpanel">
-              <div className="empty-orbit"><i /><i /><i /></div>
-              <h3>Первый снимок сохранён</h3>
-              <p>Следующая проверка сравнит страницу с этой версией. Если поменяются только часы, cookie или рекламный блок, мы промолчим.</p>
+              <h3>First snapshot saved</h3>
+              <p>The next check will compare the page against this version.</p>
               {selected.latestSnapshot?.preview?.length ? (
                 <div className="snapshot-lines">
                   {selected.latestSnapshot.preview.slice(0, 5).map((line, index) => <span key={index}>{line}</span>)}
@@ -372,32 +338,22 @@ export function WhatChangedApp() {
             </div>
           ) : (
             <div className="comparison" role="tabpanel">
-              <DemoSnapshot label="Было" date="10 авг, 09:14" plans={demoBefore} />
-              <DemoSnapshot label="Стало" date="11 авг, 09:15" plans={demoAfter} changed />
+              <DemoSnapshot label="Before" date="Aug 10, 9:14" plans={demoBefore} />
+              <DemoSnapshot label="After" date="Aug 11, 9:15" plans={demoAfter} changed />
             </div>
-          ))}
+          )}
 
-          <footer className="panel-footer">
-            <span>Следующая проверка: {selected?.status === "paused" ? "после возобновления" : selected?.nextCheckAt ? relativeDate(selected.nextCheckAt) : "через 48 минут"}</span>
-            {selected ? <button type="button" onClick={removeSelected} disabled={busy}>Удалить монитор</button> : <span className="demo-label">Демонстрационный монитор</span>}
-          </footer>
+          <div className="panel-footer">
+            <span>Next check: {selected?.status === "paused" ? "after you resume" : selected?.nextCheckAt ? relativeDate(selected.nextCheckAt) : "in 48 minutes"}</span>
+            {selected ? <button type="button" onClick={removeSelected} disabled={busy}>Remove page</button> : <span>Example monitor</span>}
+          </div>
         </article>
       </section>
-
-      <footer className="site-footer">
-        <p><strong>WhatChanged</strong> — смысл изменений без шума разметки.</p>
-        <span>Society &amp; Sustainability · 2026</span>
-      </footer>
     </main>
   );
 }
 
-function DemoSnapshot({
-  label,
-  date,
-  plans,
-  changed = false,
-}: {
+function DemoSnapshot({ label, date, plans, changed = false }: {
   label: string;
   date: string;
   plans: { label: string; value: string; detail: string; changed?: boolean }[];
@@ -405,11 +361,11 @@ function DemoSnapshot({
 }) {
   return (
     <section className="snapshot">
-      <div className="snapshot-heading"><span>{label}</span><time>{date}</time></div>
+      <div className="snapshot-heading"><strong>{label}</strong><time>{date}</time></div>
       <div className="browser-frame">
-        <div className="browser-bar"><i /><i /><i /><span>formly.example/pricing</span></div>
+        <div className="browser-bar"><span>formly.example/pricing</span></div>
         <div className="mock-page">
-          <div className="mock-nav"><b>formly</b><span>Product&nbsp;&nbsp;&nbsp;Solutions&nbsp;&nbsp;&nbsp;Pricing</span><em>Start free</em></div>
+          <div className="mock-nav"><b>formly</b><span>Product&nbsp;&nbsp; Pricing</span><em>Start free</em></div>
           <h3>Simple pricing</h3>
           <p>Everything you need to collect better data.</p>
           <div className="plans">
@@ -419,7 +375,7 @@ function DemoSnapshot({
               </div>
             ))}
           </div>
-          {changed && <div className="change-callout"><span>2 изменения</span></div>}
+          {changed && <div className="change-callout">2 changes</div>}
         </div>
       </div>
     </section>
@@ -429,11 +385,11 @@ function DemoSnapshot({
 function SnapshotFrame({ label, snapshotId, changed = false }: { label: string; snapshotId: number; changed?: boolean }) {
   return (
     <section className="snapshot">
-      <div className="snapshot-heading"><span>{label}</span><time>сохранённый снимок</time></div>
+      <div className="snapshot-heading"><strong>{label}</strong><span>Saved page</span></div>
       <div className={`browser-frame live-frame ${changed ? "changed-frame" : ""}`}>
-        <div className="browser-bar"><i /><i /><i /><span>снимок страницы</span></div>
-        <iframe src={`/api/snapshots/${snapshotId}`} title={`${label}: сохранённая версия страницы`} sandbox="" />
-        {changed && <div className="detected-box"><span>изменённая область</span></div>}
+        <div className="browser-bar"><span>Page snapshot</span></div>
+        <iframe src={`/api/snapshots/${snapshotId}`} title={`${label}: saved page version`} sandbox="" />
+        {changed && <div className="detected-box"><span>changed area</span></div>}
       </div>
     </section>
   );

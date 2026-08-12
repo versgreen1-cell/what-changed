@@ -71,17 +71,17 @@ function isPrivateHost(hostname: string) {
 
 export function normalizeUrl(input: string) {
   const raw = input.trim();
-  if (!raw) throw new MonitorError("Введите адрес страницы.");
+  if (!raw) throw new MonitorError("Enter a page address.");
 
   let url: URL;
   try {
     url = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
   } catch {
-    throw new MonitorError("Проверьте адрес страницы — он выглядит некорректно.");
+    throw new MonitorError("Check the page address — it does not look valid.");
   }
 
   if (!['http:', 'https:'].includes(url.protocol) || isPrivateHost(url.hostname)) {
-    throw new MonitorError("Можно отслеживать только публичные HTTP- и HTTPS-страницы.");
+    throw new MonitorError("Only public HTTP and HTTPS pages can be monitored.");
   }
   url.hash = "";
   return url.toString();
@@ -159,7 +159,7 @@ function protectSnapshotHtml(html: string, sourceUrl: string) {
 
 async function readLimitedBody(response: Response) {
   const declared = Number(response.headers.get("content-length") ?? 0);
-  if (declared > MAX_PAGE_BYTES) throw new MonitorError("Страница слишком большая для быстрого мониторинга.", 422);
+  if (declared > MAX_PAGE_BYTES) throw new MonitorError("This page is too large for quick monitoring.", 422);
   if (!response.body) return "";
 
   const reader = response.body.getReader();
@@ -171,7 +171,7 @@ async function readLimitedBody(response: Response) {
     total += value.byteLength;
     if (total > MAX_PAGE_BYTES) {
       await reader.cancel();
-      throw new MonitorError("Страница слишком большая для быстрого мониторинга.", 422);
+      throw new MonitorError("This page is too large for quick monitoring.", 422);
     }
     chunks.push(value);
   }
@@ -211,17 +211,17 @@ async function fetchPage(urlString: string) {
   }
 
   if (!response || !response.ok) {
-    throw new MonitorError(`Страница ответила с ошибкой ${response?.status ?? "сети"}.`, 422);
+    throw new MonitorError(`The page returned a ${response?.status ?? "network"} error.`, 422);
   }
   const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
   if (contentType && !contentType.includes("text/") && !contentType.includes("html")) {
-    throw new MonitorError("По этому адресу нет читаемой веб-страницы.", 422);
+    throw new MonitorError("There is no readable web page at this address.", 422);
   }
 
   const html = await readLimitedBody(response);
   const visibleText = cleanVisibleText(html);
   if (visibleText.length < 40) {
-    throw new MonitorError("На странице не удалось найти достаточно видимого текста.", 422);
+    throw new MonitorError("There is not enough visible text on this page.", 422);
   }
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(visibleText));
   const hash = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
@@ -267,16 +267,16 @@ function buildSummary(added: string[], removed: string[]) {
     const oldValue = removedPrice.match(currency)?.[0];
     const newValue = addedPrice.match(currency)?.[0];
     if (oldValue && newValue && oldValue !== newValue) {
-      return `Цена изменилась с ${oldValue} на ${newValue}. ${shorten(addedPrice, 90)}`;
+      return `The price changed from ${oldValue} to ${newValue}. ${shorten(addedPrice, 90)}`;
     }
   }
 
   if (added.length && removed.length) {
-    return `Обновлён раздел: «${shorten(removed[0], 82)}» заменено на «${shorten(added[0], 82)}».`;
+    return `A section was updated: "${shorten(removed[0], 82)}" was replaced with "${shorten(added[0], 82)}".`;
   }
-  if (added.length) return `На странице появилось: «${shorten(added[0])}».`;
-  if (removed.length) return `Со страницы убрали: «${shorten(removed[0])}».`;
-  return "Содержимое страницы заметно изменилось.";
+  if (added.length) return `The page now includes: "${shorten(added[0])}".`;
+  if (removed.length) return `The page no longer includes: "${shorten(removed[0])}".`;
+  return "The page content changed significantly.";
 }
 
 function nextCheck(frequencyMinutes: number) {
@@ -372,7 +372,7 @@ export async function createMonitor(db: D1Database, inputUrl: string, frequencyM
   const allowedFrequencies = [60, 360, 1440, 10080];
   const frequency = allowedFrequencies.includes(frequencyMinutes) ? frequencyMinutes : 1440;
   const existing = await db.prepare("SELECT id FROM monitors WHERE url = ?").bind(url).first<{ id: number }>();
-  if (existing) throw new MonitorError("Эта страница уже отслеживается.", 409);
+  if (existing) throw new MonitorError("This page is already being monitored.", 409);
 
   const capture = await fetchPage(url);
   const now = new Date().toISOString();
@@ -382,7 +382,7 @@ export async function createMonitor(db: D1Database, inputUrl: string, frequencyM
       RETURNING *`)
     .bind(capture.finalUrl, capture.title, frequency, now, nextCheck(frequency), now, now)
     .first<MonitorRow>();
-  if (!monitor) throw new MonitorError("Не удалось сохранить монитор.", 500);
+  if (!monitor) throw new MonitorError("Could not save the monitor.", 500);
 
   await db.prepare(`INSERT INTO snapshots
       (monitor_id, content_hash, visible_text, html_snapshot, captured_at)
@@ -395,7 +395,7 @@ export async function createMonitor(db: D1Database, inputUrl: string, frequencyM
 export async function checkMonitor(db: D1Database, id: number) {
   await ensureSchema(db);
   const monitor = await db.prepare("SELECT * FROM monitors WHERE id = ?").bind(id).first<MonitorRow>();
-  if (!monitor) throw new MonitorError("Монитор не найден.", 404);
+  if (!monitor) throw new MonitorError("Monitor not found.", 404);
 
   const now = new Date().toISOString();
   try {
@@ -410,7 +410,7 @@ export async function checkMonitor(db: D1Database, id: number) {
         RETURNING *`)
       .bind(id, capture.hash, capture.visibleText, capture.htmlSnapshot, now)
       .first<SnapshotRow>();
-    if (!current) throw new MonitorError("Не удалось сохранить новый снимок.", 500);
+    if (!current) throw new MonitorError("Could not save the new snapshot.", 500);
 
     let change = null;
     if (previous && previous.content_hash !== capture.hash) {
@@ -441,7 +441,7 @@ export async function checkMonitor(db: D1Database, id: number) {
       .run();
     return { changed: Boolean(change), change: parseChange(change), snapshotId: current.id };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Не удалось проверить страницу.";
+    const message = error instanceof Error ? error.message : "Could not check the page.";
     await db.prepare(`UPDATE monitors SET
         last_checked_at = ?, next_check_at = ?, last_error = ?, updated_at = ? WHERE id = ?`)
       .bind(now, nextCheck(monitor.frequency_minutes), message.slice(0, 300), now, id)
@@ -457,7 +457,7 @@ export async function updateMonitor(
 ) {
   await ensureSchema(db);
   const monitor = await db.prepare("SELECT * FROM monitors WHERE id = ?").bind(id).first<MonitorRow>();
-  if (!monitor) throw new MonitorError("Монитор не найден.", 404);
+  if (!monitor) throw new MonitorError("Monitor not found.", 404);
   const status = values.status && ["active", "paused"].includes(values.status) ? values.status : monitor.status;
   const frequency = values.frequencyMinutes && [60, 360, 1440, 10080].includes(values.frequencyMinutes)
     ? values.frequencyMinutes

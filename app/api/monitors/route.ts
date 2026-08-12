@@ -3,7 +3,7 @@ import { createMonitor, listMonitors, MonitorError } from "../../../lib/monitori
 
 function errorResponse(error: unknown) {
   const status = error instanceof MonitorError ? error.status : 500;
-  const message = error instanceof Error ? error.message : "Неожиданная ошибка.";
+  const message = error instanceof Error ? error.message : "Unexpected error.";
   return Response.json({ error: message }, { status });
 }
 

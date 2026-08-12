@@ -5,10 +5,10 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
   try {
     const { id: rawId } = await context.params;
     const id = Number.parseInt(rawId, 10);
-    if (!Number.isInteger(id) || id <= 0) throw new MonitorError("Некорректный идентификатор.");
+    if (!Number.isInteger(id) || id <= 0) throw new MonitorError("Invalid monitor ID.");
     return Response.json(await checkMonitor(env.DB, id));
   } catch (error) {
     const status = error instanceof MonitorError ? error.status : 500;
-    return Response.json({ error: error instanceof Error ? error.message : "Неожиданная ошибка." }, { status });
+    return Response.json({ error: error instanceof Error ? error.message : "Unexpected error." }, { status });
   }
 }
