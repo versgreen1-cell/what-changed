@@ -1,60 +1,37 @@
 Society & Sustainability
 
-# WhatChanged
+# What changed
 
-WhatChanged следит за важными веб-страницами и объясняет изменения обычным языком. Вместо сырого HTML-diff владелец страницы получает одну фразу: что поменялось, где и насколько это существенно.
+Pages change. Most diffs are noise. **What changed** keeps the useful part.
 
-![WhatChanged — понятное сравнение изменений](./public/og.png)
+[Open the live monitor](https://whatchanged-tracker.vercel.app) · [Watch the presentation](./media/whatchanged-presentation.mp4)
 
-## Что уже работает
+## In one minute
 
-- добавление публичной страницы по URL без регистрации;
-- первый снимок сразу при добавлении;
-- автоматические проверки каждый час, каждые 6 часов, раз в день или раз в неделю;
-- сохранение истории в Cloudflare D1;
-- очистка скриптов, разметки, cookie-сообщений, временных меток и служебных токенов;
-- сравнение только видимого текста и порог значимости изменений;
-- понятная сводка с добавленными и удалёнными фрагментами;
-- сохранённые версии страницы «до» и «после»;
-- пауза, ручная проверка и удаление монитора;
-- адаптивный мобильный интерфейс и встроенный демо-сценарий.
+Add a public URL and choose how often it should be checked. The app saves a clean snapshot, compares it with the next version, and highlights changes that a person would actually care about: a new price, a removed condition, an updated deadline, or a changed plan.
 
-## Главный демо-сценарий
+## What is included
 
-Откройте демонстрационный монитор **Formly Pricing**. WhatChanged показывает одну фразу: цена Pro выросла с $29 до $39, а в бесплатном плане появился лимит в 5 проектов. Переключатель **«Технический diff»** показывает, сколько бесполезного шума скрывается за этим коротким выводом.
+- URL validation and protection from private-network requests
+- scheduled and manual checks
+- cleaned snapshots with scripts disabled
+- side-by-side and raw-diff views
+- a short human-readable summary
+- local watch history in the browser
 
-Подробный план записи находится в [DEMO.md](./DEMO.md).
-
-## Как это работает
-
-1. Сервер получает HTML публичной страницы с ограничением размера и времени ответа.
-2. Из снимка удаляются скрипты, стили, сессионные данные и повторяющиеся служебные строки.
-3. Нормализованный видимый текст сравнивается с предыдущей версией.
-4. Незначительные изменения отбрасываются, а содержательные превращаются в короткую фразу.
-5. Исходные снимки и событие сохраняются в D1, чтобы показать честное сравнение «до/после».
-
-## Локальный запуск
-
-Требуется Node.js 22.13 или новее.
+## Try it locally
 
 ```bash
 npm install
 npm run dev
 ```
 
-Проверка готовности:
+Open `http://localhost:3000`, add a public page, then use **Check now** after its content changes.
 
-```bash
-npm run lint
-npm run build
+## The pipeline
+
+```text
+public URL → safe fetch → clean snapshot → compare → explain → save
 ```
 
-Схема базы находится в `db/schema.ts`, готовая миграция — в `drizzle/`.
-
-## Ограничения демо-версии
-
-WhatChanged работает с публичными HTML-страницами. Страницы за авторизацией, локальные адреса и файлы не запрашиваются. Внешние скрипты сохранённых снимков отключены. Это осознанный предел безопасной версии для демонстрации.
-
-## Стек
-
-React 19, vinext, Cloudflare Workers, Cloudflare D1, Drizzle ORM, TypeScript.
+The monitor deliberately does not sign into private accounts or execute page scripts. It is aimed at public pricing, policy, course, and product pages where a compact explanation is more useful than a wall of HTML.

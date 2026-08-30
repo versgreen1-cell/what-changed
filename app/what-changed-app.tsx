@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 
 type Change = {
   id: number;
@@ -32,29 +33,28 @@ type Monitor = {
 };
 
 const demoBefore = [
-  { label: "Free", value: "$0", detail: "Unlimited projects" },
-  { label: "Pro", value: "$29", detail: "per month" },
-  { label: "Business", value: "$79", detail: "per month" },
+  { label: "Latest", value: "19.2.7", detail: "June 1, 2026" },
+  { label: "React 19.1", value: "19.1.8", detail: "June 1, 2026" },
+  { label: "React 19.0", value: "19.0.7", detail: "June 1, 2026" },
 ];
 
 const demoAfter = [
-  { label: "Free", value: "$0", detail: "Up to 5 projects", changed: true },
-  { label: "Pro", value: "$39", detail: "per month", changed: true },
-  { label: "Business", value: "$79", detail: "per month" },
+  { label: "Latest", value: "19.2.8", detail: "July 21, 2026", changed: true },
+  { label: "React 19.1", value: "19.1.9", detail: "July 21, 2026", changed: true },
+  { label: "React 19.0", value: "19.0.8", detail: "July 21, 2026", changed: true },
 ];
 
 const rawDiff = [
-  '@@ -118,11 +124,15 @@ <section data-plan="pricing">',
-  '- <span class="price" data-session="a8f2">$29</span>',
-  '+ <span class="price" data-session="c19b">$39</span>',
-  '  <div class="features">',
-  '+   <li data-test="project-cap">Up to 5 projects</li>',
-  '-   <meta content="2026-08-10T09:14:03Z">',
-  '+   <meta content="2026-08-11T09:15:12Z">',
-  '-   <img src="/campaign/summer-a.webp">',
-  '+   <img src="/campaign/summer-b.webp">',
-  '  </div>',
-  '  <script>window.__SESSION__="fce92d1..."</script>',
+  '@@ -352,8 +352,12 @@ <section aria-label="Release list">',
+  '- <a href="/react/react/releases/tag/v19.2.7">19.2.7</a>',
+  '+ <a href="/react/react/releases/tag/v19.2.8">19.2.8</a>',
+  '+ <time datetime="2026-07-21">July 21st, 2026</time>',
+  '+ <h3>React Server Components</h3>',
+  '+ <li>Performance improvements when decoding</li>',
+  '- <meta data-turbo-transient content="d8b4a1">',
+  '+ <meta data-turbo-transient content="f49c32">',
+  '- <script nonce="27af">window.__HYDRATION__=...</script>',
+  '+ <script nonce="91cc">window.__HYDRATION__=...</script>',
 ];
 
 function relativeDate(value: string | null) {
@@ -81,7 +81,9 @@ function hostLabel(url: string) {
   }
 }
 
-export function WhatChangedApp() {
+type AppView = "watches" | "history";
+
+export function WhatChangedApp({ view = "watches" }: { view?: AppView }) {
   const [monitors, setMonitors] = useState<Monitor[]>([]);
   const [selectedId, setSelectedId] = useState<number | "demo">("demo");
   const [loading, setLoading] = useState(true);
@@ -194,19 +196,52 @@ export function WhatChangedApp() {
     }
   }
 
+  function openMonitor(id: number | "demo") {
+    setSelectedId(id);
+    setShowTechnical(false);
+    if (view === "watches") {
+      window.sessionStorage.setItem("whatchanged:selected", String(id));
+      window.location.assign("/history");
+    }
+  }
+
+  useEffect(() => {
+    if (view !== "history") return;
+    const saved = window.sessionStorage.getItem("whatchanged:selected");
+    if (!saved) return;
+    const timer = window.setTimeout(
+      () => setSelectedId(saved === "demo" ? "demo" : Number(saved)),
+      0,
+    );
+    return () => window.clearTimeout(timer);
+  }, [view]);
+
   const change = selected?.latestChange;
   const hasChange = Boolean(change) || !selected;
   const summary = change?.summary ?? (selected
     ? "Nothing important has changed. We will keep checking."
-    : "The Pro price went from $29 to $39. The free plan now has a five-project limit.");
+    : "React 19.2.8 was published. The notes mention a React Server Components decoding improvement.");
 
   return (
-    <main className="page">
-      <section className="intro" aria-labelledby="page-title">
+    <main className={`page view-${view}`}>
+      <header className="cdio-header">
+        <Link className="cdio-brand" href="/" aria-label="What changed home">
+          <span aria-hidden="true">W/</span>
+          What changed
+        </Link>
+        <nav aria-label="Application">
+          <Link className={view === "watches" ? "active" : ""} href="/">Watches</Link>
+          <Link className={view === "history" ? "active" : ""} href="/history">History</Link>
+          <button type="button">Settings</button>
+        </nav>
+        <span className="cdio-state"><i /> local service</span>
+      </header>
+
+      {view === "watches" ? <section className="intro" aria-labelledby="page-title">
         <div className="intro-copy">
-          <p className="product-name">WhatChanged</p>
-          <h1 id="page-title">Watch a page without reading every diff.</h1>
-          <p>We check the page and tell you what actually changed. Timestamps, ads and other noise stay out.</p>
+          <p className="product-name">Add watch</p>
+          <h1 id="page-title">Web page URL</h1>
+          <p>Enter one page to save its current version and check it on a schedule.</p>
         </div>
 
         <form className="add-form" onSubmit={addMonitor}>
@@ -235,23 +270,31 @@ export function WhatChangedApp() {
             {busy ? "Adding..." : "Watch page"}
           </button>
         </form>
-        <p className="form-note">No account needed. We save the first copy right away.</p>
+        <p className="form-note">The first snapshot is saved immediately. Dynamic page noise is ignored.</p>
         {message && <p className="notice" role="status">{message}</p>}
-      </section>
+      </section> : null}
 
-      <section className="app-grid" aria-label="Page monitors">
+      <section className="app-grid" id="watches" aria-label="Page monitors">
         <aside className="monitor-list">
           <div className="list-title">
-            <h2>Pages</h2>
-            <span>{monitors.length + 1}</span>
+            <div>
+              <button className="watch-filter active" type="button">All</button>
+              <button className="watch-filter" type="button">Unread <b>1</b></button>
+              <button className="watch-filter" type="button">Errors</button>
+            </div>
+            <span>{monitors.length + 1} watches</span>
+          </div>
+          <div className="monitor-columns" aria-hidden="true">
+            <span>Web page</span><span>Last checked</span><span>Changes</span>
           </div>
           <button
             className={`monitor-item ${selectedId === "demo" ? "selected" : ""}`}
             type="button"
-            onClick={() => { setSelectedId("demo"); setShowTechnical(false); }}
+            onClick={() => openMonitor("demo")}
           >
-            <span className="site-initial">F</span>
-            <span className="monitor-copy"><strong>Formly pricing</strong><small>formly.example</small></span>
+            <span className="site-initial">R</span>
+            <span className="monitor-copy"><strong>React releases</strong><small>github.com/react/react/releases</small></span>
+            <span className="monitor-time">12 minutes ago</span>
             <span className="change-count" aria-label="One change">1</span>
           </button>
 
@@ -262,23 +305,24 @@ export function WhatChangedApp() {
               className={`monitor-item ${selectedId === monitor.id ? "selected" : ""}`}
               type="button"
               key={monitor.id}
-              onClick={() => { setSelectedId(monitor.id); setShowTechnical(false); }}
+              onClick={() => openMonitor(monitor.id)}
             >
               <span className="site-initial">{hostLabel(monitor.url).charAt(0).toUpperCase()}</span>
               <span className="monitor-copy"><strong>{monitor.name}</strong><small>{hostLabel(monitor.url)}</small></span>
+              <span className="monitor-time">{relativeDate(monitor.lastCheckedAt)}</span>
               <span className={monitor.latestChange ? "change-count" : "quiet-mark"}>
                 {monitor.latestChange ? "1" : "OK"}
               </span>
             </button>
           ))}
-          <p className="noise-note">Small dynamic changes are ignored automatically.</p>
+          <p className="noise-note">Showing all watches · click a row to inspect the latest saved change.</p>
         </aside>
 
-        <article className={`change-panel ${demoPulse ? "pulse" : ""}`}>
+        {view === "history" ? <article className={`change-panel ${demoPulse ? "pulse" : ""}`} id="change-detail">
           <div className="change-header">
             <div>
-              <p>{selected ? hostLabel(selected.url) : "formly.example/pricing"}</p>
-              <h2>{selected?.name ?? "Formly pricing"}</h2>
+              <p>{selected ? hostLabel(selected.url) : "github.com/react/react/releases"}</p>
+              <h2>{selected?.name ?? "React releases"}</h2>
             </div>
             <div className="change-actions">
               {selected && (
@@ -319,7 +363,7 @@ export function WhatChangedApp() {
             <div className="technical-diff" role="tabpanel">
               <div className="code-top">page-source.diff <span>11 lines</span></div>
               <pre>{rawDiff.map((line, index) => <code className={line.startsWith("+") ? "added" : line.startsWith("-") ? "removed" : ""} key={index}>{line}{"\n"}</code>)}</pre>
-              <p>Most of this is page noise. WhatChanged kept the price and plan-limit updates.</p>
+              <p>Most of this is page noise. What changed kept the release number and the relevant note.</p>
             </div>
           ) : change ? (
             <div className="comparison" role="tabpanel">
@@ -347,7 +391,7 @@ export function WhatChangedApp() {
             <span>Next check: {selected?.status === "paused" ? "after you resume" : selected?.nextCheckAt ? relativeDate(selected.nextCheckAt) : "in 48 minutes"}</span>
             {selected ? <button type="button" onClick={removeSelected} disabled={busy}>Remove page</button> : <span>Example monitor</span>}
           </div>
-        </article>
+        </article> : null}
       </section>
     </main>
   );
@@ -362,21 +406,16 @@ function DemoSnapshot({ label, date, plans, changed = false }: {
   return (
     <section className="snapshot">
       <div className="snapshot-heading"><strong>{label}</strong><time>{date}</time></div>
-      <div className="browser-frame">
-        <div className="browser-bar"><span>formly.example/pricing</span></div>
-        <div className="mock-page">
-          <div className="mock-nav"><b>formly</b><span>Product&nbsp;&nbsp; Pricing</span><em>Start free</em></div>
-          <h3>Simple pricing</h3>
-          <p>Everything you need to collect better data.</p>
-          <div className="plans">
-            {plans.map((plan) => (
-              <div className={`plan ${plan.changed ? "changed" : ""}`} key={plan.label}>
-                <small>{plan.label}</small><strong>{plan.value}</strong><span>{plan.detail}</span><i />
-              </div>
-            ))}
+      <div className="snapshot-table">
+        <div className="snapshot-table-head"><span>Channel</span><span>Version</span><span>Published</span></div>
+        {plans.map((plan) => (
+          <div className={`snapshot-table-row ${plan.changed ? "changed" : ""}`} key={plan.label}>
+            <strong>{plan.label}</strong>
+            <span>{plan.value}</span>
+            <small>{plan.detail}</small>
           </div>
-          {changed && <div className="change-callout">2 changes</div>}
-        </div>
+        ))}
+        {changed ? <div className="snapshot-table-note">2 values changed since the previous check</div> : null}
       </div>
     </section>
   );

@@ -16,19 +16,19 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     metadataBase,
-    title: "WhatChanged — Know what changed. Skip the noise.",
+    title: "What changed — Know what changed. Skip the noise.",
     description: "Simple page monitoring that ignores technical noise and explains meaningful changes in plain English.",
-    applicationName: "WhatChanged",
+    applicationName: "What changed",
     openGraph: {
-      title: "WhatChanged — Know what changed. Skip the noise.",
+      title: "What changed — Know what changed. Skip the noise.",
       description: "Track prices, policies and product pages without reading raw HTML diffs.",
       type: "website",
       locale: "en_US",
-      images: [{ url: "/og-minimal.png", width: 1734, height: 907, alt: "WhatChanged before and after price comparison" }],
+      images: [{ url: "/og-minimal.png", width: 1734, height: 907, alt: "What changed before and after price comparison" }],
     },
     twitter: {
       card: "summary_large_image",
-      title: "WhatChanged",
+      title: "What changed",
       description: "Know what changed. Skip the noise.",
       images: ["/og-minimal.png"],
     },
