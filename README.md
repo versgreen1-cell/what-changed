@@ -4,7 +4,13 @@ Society & Sustainability
 
 Pages change. Most diffs are noise. **What changed** keeps the useful part.
 
-[Open the live monitor](https://whatchanged-tracker.vercel.app) · [Watch the presentation](./media/whatchanged-presentation.mp4)
+[Open the live monitor](https://whatchanged-tracker.vercel.app)
+
+## Watch it find a meaningful change
+
+https://github.com/user-attachments/assets/141ffdfd-1342-493a-9adc-d64329e63c60
+
+The original file is also available as a [direct MP4 download](./media/whatchanged-presentation.mp4).
 
 ## In one minute
 
